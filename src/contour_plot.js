@@ -19,7 +19,7 @@ export function smoothPoints(f, points, level, xScale, yScale) {
         return f(xScale.invert(x), yScale.invert(y)) - level;
     };
     for (var k = 0; k < points.length; ++k) {
-        var point = points[k], 
+        var point = points[k],
             x = point[0], y = point[1];
 
         if ((x <= xRange[0]) || (x >= xRange[1]) ||
@@ -30,13 +30,13 @@ export function smoothPoints(f, points, level, xScale, yScale) {
         var p = {'maxIterations' : 9};
         for (var delta = 0.5; delta <= 3; delta += 0.5) {
             if (ySmooth(y - delta) * currentSmooth < 0) {
-                y = bisect(ySmooth, y, y - delta, p); 
+                y = bisect(ySmooth, y, y - delta, p);
             } else if (xSmooth(x - delta) * currentSmooth < 0) {
-                x = bisect(xSmooth, x, x - delta, p); 
+                x = bisect(xSmooth, x, x - delta, p);
             } else if (ySmooth(y + delta) * currentSmooth < 0) {
-                y = bisect(ySmooth, y, y + delta, p); 
+                y = bisect(ySmooth, y, y + delta, p);
             } else if (xSmooth(x + delta) * currentSmooth < 0) {
-                x = bisect(xSmooth, x, x + delta, p); 
+                x = bisect(xSmooth, x, x + delta, p);
             } else {
                 continue;
             }
@@ -51,8 +51,8 @@ export function smoothPoints(f, points, level, xScale, yScale) {
 export function getLogLevels(f, xScale, yScale, count) {
     var xRange = xScale.range(), yRange = yScale.range();
 
-    count = count || 12;
-   
+    count = count || 14;
+
     // figure out min/max values by sampling pointson a grid
     var maxValue, minValue, value;
     maxValue = minValue = f(xScale.invert(xRange[0]), yScale.invert(yRange[0]));
@@ -64,13 +64,20 @@ export function getLogLevels(f, xScale, yScale, count) {
         }
     }
 
-    // convert 
-    var levelScale = d3.scaleLog()
-        .domain([1, maxValue - minValue])
-        .range([0, count]);
+    // lets get contour lines on a log scale, keeping
+    // values on an integer scale (if possible)
     var levels = [];
-    for (var i = count; i > 0; --i) {
-        levels.push(minValue + levelScale.invert(i) - 1);
+    var logRange = Math.log(maxValue - Math.floor(minValue));
+    var base = Math.ceil(Math.exp(logRange / (count))),
+               upper = Math.pow(base, Math.ceil(logRange / Math.log(base)));
+
+    for (var i = 0; i < count; ++i) {
+        var current = Math.floor(minValue) + upper;
+        if (current < minValue) {
+            break;
+        }
+        levels.push(current);
+        upper /= base;
     }
 
     return levels;
@@ -134,7 +141,7 @@ export function ContourPlot() {
             .style("opacity", "0");
 
         var tooltip = d3.selectAll(".contour_tooltip");
-            
+
         // create the svg element if it doesn't already exist
         selection.selectAll("svg").data([0]).enter().append("svg");
         var svg = selection.selectAll("svg").data([0]);
@@ -145,13 +152,15 @@ export function ContourPlot() {
                 tooltip.transition().duration(400).style("opacity", 0.9);
             })
            .on("mousemove", function() {
-                var point = d3.mouse(this), 
+                var point = d3.mouse(this),
                     x = xScale.invert(point[0]),
                     y = yScale.invert(point[1]),
                     fx = f(x, y);
 
+                // don't let tooltip obscure items above chart
+                var offset = Math.min(44, point[1] - padding);
                 tooltip.style("left", (d3.event.pageX) + "px")
-                       .style("top", (d3.event.pageY - 44) + "px");
+                       .style("top", (d3.event.pageY - offset) + "px");
 
                 tooltip.html("x = " + x.toFixed(2) + " y = " + y.toFixed(2) + "<br>f(x,y) = " + fx.toFixed(2) );
             })
@@ -189,7 +198,7 @@ export function ContourPlot() {
         if (drawAxis) {
             var xAxis = d3.axisBottom().scale(xScale),
                 yAxis = d3.axisLeft().scale(yScale);
-            
+
             svg.append("g")
                 .attr("class", "axis")
                 .attr("transform", "translate(0," + (height - 1.0 *  padding) + ")")
