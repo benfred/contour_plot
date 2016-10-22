@@ -150,6 +150,7 @@ export function ContourPlot() {
            .attr("height", height)
            .on("mouseover", function() {
                 tooltip.transition().duration(400).style("opacity", 0.9);
+                tooltip.style("z-index", "");
             })
            .on("mousemove", function() {
                 var point = d3.mouse(this),
@@ -157,16 +158,15 @@ export function ContourPlot() {
                     y = yScale.invert(point[1]),
                     fx = f(x, y);
 
-                // don't let tooltip obscure items above chart
-                var offset = Math.min(44, point[1] - padding);
                 tooltip.style("left", (d3.event.pageX) + "px")
-                       .style("top", (d3.event.pageY - offset) + "px");
+                       .style("top", (d3.event.pageY - 44) + "px");
 
                 tooltip.html("x = " + x.toFixed(2) + " y = " + y.toFixed(2) + "<br>f(x,y) = " + fx.toFixed(2) );
             })
 
            .on("mouseout", function() {
                 tooltip.transition().duration(400).style("opacity", 0);
+                tooltip.style("z-index", -1);
            });
 
         var contours = getContours(f, xScale, yScale);
