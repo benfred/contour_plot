@@ -25,6 +25,10 @@
 <script src="./build/contour_plot.js"></script>
 
 <script>
+
+function himmelblau(x, y) {
+    return (x * x + y - 11) * ( x * x + y - 11) + (x + y * y - 7) * (x + y * y - 7);
+}
 function banana(x, y) {
     return (1 - x) * (1 - x) + 100 * (y - x * x) * ( y - x * x)
 }
@@ -49,11 +53,17 @@ function goldsteinPrice(x, y) {
 }
 
 var plot = contour_plot.ContourPlot()
-    .f(goldsteinPrice)
+    .f(himmelblau)
     .drawAxis(false)
-    .xDomain([-2, 2])
-    .yDomain([1, -2])
-    .colourRange(["white", "green"]);
+    .xDomain([-6, 6])
+    .yDomain([6, -6])
+    .contourCount(12)
+    .minima([{x : 3.584428, y : -1.848126},
+             {x : -2.805118, y : 3.131312},
+             {x : -3.779310, y : -3.283186},
+             {x : 3, y : 2}]);
+
+
 
 var elements = plot(d3.select("#contour_graph"));
 </script>

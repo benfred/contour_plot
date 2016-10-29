@@ -189,8 +189,6 @@
   function getLogLevels(f, xScale, yScale, count) {
       var xRange = xScale.range(), yRange = yScale.range();
 
-      count = count || 14;
-
       // figure out min/max values by sampling pointson a grid
       var maxValue, minValue, value;
       maxValue = minValue = f(xScale.invert(xRange[0]), yScale.invert(yRange[0]));
@@ -221,18 +219,66 @@
       return levels;
   }
 
-  function getContours(f, xScale, yScale, count) {
+  function getStartingPoint(lineFunc, x, y) {
+      x = Math.floor(x);
+      y = Math.floor(y);
+      var j = 0;
+      while (true) {
+          j += 1;
+          if (!lineFunc(x+j, y)) {
+              return [x+j, y];
+          }
+          if (!lineFunc(x, y+j)) {
+              return [x, y+j];
+          }
+      }
+  }
+
+  function getContours(f, xScale, yScale, count, minima) {
       // figure out even distribution in log space of values
       var levels = getLogLevels(f, xScale, yScale, count);
 
       // use marching squares algo from d3.geom.contour to build up a series of paths
-      // note: this only handles a single minima
       var ret = [];
       for (var i = 0; i < levels.length; ++i) {
           var level = levels[i];
           var lineFunc = isoline(f, level, xScale, yScale);
-          var points = d3_contour(lineFunc);
-          smoothPoints(f, points, level, xScale, yScale);
+
+          var points= [];
+          if (minima) {
+              var initialPoints = [];
+              for (var m = 0; m < minima.length; ++m) {
+                  var initial = getStartingPoint(lineFunc, xScale(minima[m].x), yScale(minima[m].y));
+                  var current = d3_contour(lineFunc, initial);
+
+                    // don't add points if already seen
+                    var duplicate = false;
+                    for (var j = 0 ; j < current.length; ++j) {
+                       var point = current[j];
+                       for (var k = 0; k < initialPoints.length; ++k) {
+                          var other = initialPoints[k];
+                          if ((point[0] == other[0]) &&
+                              (point[1] == other[1])) {
+                              duplicate = true;
+                              break;
+                          }
+                       }
+                       if (duplicate) break;
+                    }
+                    if (duplicate) continue;
+
+                    initialPoints.push(initial);
+
+                    smoothPoints(f, current, level, xScale, yScale);
+                    if (points.length) points.push(null);
+                    points = points.concat(current);
+              }
+          } else {
+              points = d3_contour(lineFunc);
+              smoothPoints(f, points, level, xScale, yScale);
+
+          }
+
           ret.push(points);
       }
 
@@ -243,9 +289,11 @@
   function ContourPlot() {
       var drawAxis = false,
           f = function (x, y) { return (1 - x) * (1 - x) + 100 * (y - x * x) * ( y - x * x); },
-          colourRange = ["white", "green"],
           yDomain = [3, -3],
-          xDomain = [-2, 2];
+          xDomain = [-2, 2],
+          minima = null,
+          contourCount = 14,
+          colourScale = d3.scaleLinear().domain([0, contourCount]).range(["white", d3.schemeCategory10[0]]);
 
       // todo: resolution independent (sample say 200x200)
       // todo: handle function with multiple local minima
@@ -307,22 +355,22 @@
                   tooltip.style("z-index", -1);
              });
 
-          var contours = getContours(f, xScale, yScale);
+          var contours = getContours(f, xScale, yScale, contourCount, minima);
           var paths = contours.paths,
               levels = contours.levels;
 
-          var colours = d3.scaleLinear().domain([0, levels.length]).range(colourRange);
-
           var line = d3.line()
               .x(function(d) { return d[0]; })
-              .y(function(d) { return d[1]; });
+              .y(function(d) { return d[1]; })
+              .curve(d3.curveLinearClosed)
+              .defined(function(d) { return d; });
 
           var pathGroup = svg.append("g");
 
           pathGroup.selectAll("path").data(paths).enter()
               .append("path")
-              .attr("d", function(d) { return line(d) + " Z";})
-              .style("fill", function(d, i) { return colours(i); })
+              .attr("d", line)
+              .style("fill", function(d, i) { return colourScale(i); })
               .style("stroke-width", 1.5)
               .style("stroke", "white")
               .on("mouseover", function() {
@@ -368,9 +416,21 @@
           return chart;
       };
 
-      chart.colourRange = function(_) {
-          if (!arguments.length) return colourRange;
-          colourRange = _;
+      chart.colourScale = function(_) {
+          if (!arguments.length) return colourScale;
+          colourScale = _;
+          return chart;
+      };
+
+      chart.contourCount = function(_) {
+          if (!arguments.length) return contourCount;
+          contourCount = _;
+          return chart;
+      };
+
+      chart.minima = function(_) {
+          if (!arguments.length) return minima;
+          minima = _;
           return chart;
       };
 
