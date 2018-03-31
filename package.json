@@ -5,7 +5,7 @@
   "url": "https://github.com/benfred/contour_plot/issues",
   "devDependencies": {
     "rollup": "0.21.2",
-    "uglify-js": "2",
+    "uglify-js": "^2.6.0",
     "jshint": "^2.8.0"
   },
   "description": "Contour Plots of Mathematical Functions",
