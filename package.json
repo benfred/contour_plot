@@ -4,7 +4,7 @@
   "author": "Ben Frederickson <ben@benfrederickson.com> (http:/www.benfrederickson.com)",
   "url": "https://github.com/benfred/contour_plot/issues",
   "devDependencies": {
-    "rollup": "0.21.2",
+    "rollup": "3.29.5",
     "uglify-js": "^2.6.0",
     "jshint": "^2.8.0"
   },
